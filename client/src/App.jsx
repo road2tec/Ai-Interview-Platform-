@@ -4,12 +4,15 @@ import Footer from './components/Footer';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import StartInterview from './pages/StartInterview';
-import InterviewScreen from './pages/InterviewScreen';
 import Results from './pages/Results';
-
+import InterviewScreen from './pages/InterviewScreen';
 import InterviewChat from './pages/InterviewChat';
+import DashboardLayout from './pages/dashboard/DashboardLayout';
+import DashboardOverview from './pages/dashboard/DashboardOverview';
+import InterviewsHistory from './pages/dashboard/InterviewsHistory';
+import Analytics from './pages/dashboard/Analytics';
+import SecurityAlerts from './pages/dashboard/SecurityAlerts';
+import StartInterview from './pages/dashboard/StartInterview';
 
 function App() {
     return (
@@ -32,11 +35,19 @@ function AppContent() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/start-interview" element={<StartInterview />} />
+
+                    {/* Nested Dashboard Routes */}
+                    <Route path="/dashboard" element={<DashboardLayout />}>
+                        <Route index element={<DashboardOverview />} />
+                        <Route path="history" element={<InterviewsHistory />} />
+                        <Route path="analytics" element={<Analytics />} />
+                        <Route path="reports" element={<InterviewsHistory />} />
+                        <Route path="alerts" element={<SecurityAlerts />} />
+                        <Route path="start" element={<StartInterview />} />
+                    </Route>
+
                     <Route path="/interview" element={<InterviewScreen />} />
                     <Route path="/chat" element={<InterviewChat />} />
-                    <Route path="/results" element={<Results />} />
                     <Route path="/results/:id" element={<Results />} />
                 </Routes>
             </main>
