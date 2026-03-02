@@ -6,11 +6,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export const startSession = async (req, res) => {
     try {
         const { domain, duration } = req.body;
-        const newSession = await InterviewSession.create({
-            userId: req.user.id,
-            domain,
-            duration,
-        });
 
         let questionCount = duration === 10 ? 5 : 8;
         const questions = await Question.aggregate([
@@ -18,7 +13,22 @@ export const startSession = async (req, res) => {
             { $sample: { size: questionCount } }
         ]);
 
-        res.status(201).json({ session: newSession, questions });
+        if (questions.length === 0) {
+            return res.status(404).json({ error: "No questions found for this domain" });
+        }
+
+        const firstQuestion = questions[0].question;
+
+        const newSession = await InterviewSession.create({
+            userId: req.user.id,
+            domain,
+            duration,
+            conversation: [
+                { role: "assistant", content: firstQuestion }
+            ]
+        });
+
+        res.status(201).json({ session: newSession, firstQuestion });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -29,7 +39,7 @@ export const evaluateAnswer = async (req, res) => {
         const { interviewId, questionId, question, userAnswer } = req.body;
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `You are an expert technical interviewer evaluating a candidate's answer.
 Evaluate the following answer to the interview question based on:
@@ -76,8 +86,10 @@ export const endSession = async (req, res) => {
     try {
         const { interviewId } = req.body;
         const answers = await Answer.find({ interviewId });
+        const session = await InterviewSession.findById(interviewId);
 
-        let totalScore = 0;
+        let totalScore = session ? session.totalScore : 0;
+
         if (answers.length > 0) {
             const sum = answers.reduce((acc, ans) => acc + (ans.technicalScore + ans.clarityScore + ans.depthScore) / 3, 0);
             totalScore = sum / answers.length; // Average score out of 10
@@ -97,12 +109,14 @@ export const endSession = async (req, res) => {
 export const submitAlert = async (req, res) => {
     try {
         const { interviewId, message } = req.body;
+        console.log(`Alert Received for Session ${interviewId}: ${message}`);
         await InterviewSession.findByIdAndUpdate(interviewId, {
             $inc: { alertCount: 1 },
             $push: { alerts: { time: new Date(), message } }
         });
         res.status(200).json({ success: true });
     } catch (error) {
+        console.error("Alert Submission Error:", error.message);
         res.status(500).json({ error: error.message });
     }
 }
@@ -146,12 +160,119 @@ export const getDashboardData = async (req, res) => {
                 domain: s.domain,
                 createdAt: s.createdAt,
                 totalScore: s.totalScore,
-                alertCount: s.alertCount
+                alertCount: s.alertCount,
+                alerts: s.alerts
             })),
             performanceData,
             domainData
         });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export const chatInterview = async (req, res) => {
+    try {
+        const { sessionId, userMessage } = req.body;
+
+        const session = await InterviewSession.findById(sessionId);
+        if (!session) return res.status(404).json({ error: "Session not found" });
+
+        // Push user message to DB
+        session.conversation.push({ role: "user", content: userMessage });
+
+        // Initialize Gemini
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+        const totalQuestions = session.duration === 10 ? 5 : 8;
+        const currentQ = session.currentQuestionIndex || 0;
+        const isNearEnd = (totalQuestions - currentQ) <= 2;
+
+        const systemPrompt = `You are a professional technical interviewer for the domain: ${session.domain}.
+Rules:
+- Ask domain-related questions only.
+- Current progress: Question ${currentQ + 1} of ${totalQuestions}.
+${isNearEnd ? `- We are near the end. You MUST ask a practical coding task or a database query task now based on the domain.` : `- Ask conceptual or technical questions based on the domain.`}
+- Ask 1 follow-up question per main answer if needed.
+- Evaluate user's answer for technical correctness, clarity, and depth.
+- Maintain professional tone.
+
+Return JSON ONLY (no markdown markup, no backticks, just raw JSON):
+{
+  "reply": "your response to user message",
+  "technical_score": number,
+  "clarity_score": number,
+  "depth_score": number,
+  "next_question": "next main question if applicable",
+  "is_coding": boolean,
+  "coding_topic": "e.g. 'Binary Search', 'SQL Join', 'Array Manipulation'",
+  "initial_code": "boilerplate code if is_coding is true, else empty"
+}`;
+
+        // Prepare History for Gemini Chat - MUST start with 'user' role
+        let history = [];
+
+        const firstUserMsg = {
+            role: "user",
+            parts: [{ text: `Hi, I am ready to start the interview for ${session.domain}. Total questions planned: ${totalQuestions}. Please follow these instructions: ${systemPrompt}` }]
+        };
+
+        const existingMessages = session.conversation.map(msg => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }]
+        }));
+
+        history = [firstUserMsg, ...existingMessages];
+
+        // Gemini's sendMessage expects the latest message NOT to be in history
+        const latestMessage = history.pop();
+
+        // Start chat with history
+        const chat = model.startChat({
+            history: history,
+        });
+
+        // Send user's latest message
+        const result = await chat.sendMessage(latestMessage.parts[0].text);
+        const response = await result.response;
+        const rawContent = response.text().trim();
+
+        // Clean up markdown
+        const jsonContent = rawContent.replace(/^```json/, '').replace(/```$/, '').trim();
+        const aiResponse = JSON.parse(jsonContent);
+
+        // Update scores (running average)
+        const tScore = aiResponse.technical_score || aiResponse.technicalScore;
+        const cScore = aiResponse.clarity_score || aiResponse.clarityScore;
+        const dScore = aiResponse.depth_score || aiResponse.depthScore;
+
+        if (tScore !== undefined && cScore !== undefined && dScore !== undefined) {
+            const currentCount = session.currentQuestionIndex || 0;
+            const newMsgAvg = (Number(tScore) + Number(cScore) + Number(dScore)) / 3;
+
+            // Calculate new total average
+            session.totalScore = ((session.totalScore * currentCount) + newMsgAvg) / (currentCount + 1);
+            session.currentQuestionIndex = currentCount + 1;
+        }
+
+        // Push assistant response to DB
+        const fullReply = aiResponse.reply + (aiResponse.next_question ? " " + aiResponse.next_question : "");
+        session.conversation.push({ role: "assistant", content: fullReply });
+
+        await session.save();
+
+        res.json({
+            reply: aiResponse.reply,
+            next_question: aiResponse.next_question,
+            totalScore: session.totalScore,
+            is_coding: aiResponse.is_coding || false,
+            coding_topic: aiResponse.coding_topic || "",
+            initial_code: aiResponse.initial_code || ""
+        });
+
+    } catch (error) {
+        console.error("Gemini Chat Error:", error);
         res.status(500).json({ error: error.message });
     }
 }

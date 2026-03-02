@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { evaluateQuestion, sendAlert, endSession as endSessionAPI } from '../services/api';
 import { Mic, MicOff, Send, Clock, AlertTriangle, ShieldAlert, Monitor, Type, Video, Activity } from 'lucide-react';
+import * as tf from '@tensorflow/tfjs';
+import * as blazeface from '@tensorflow-models/blazeface';
 
 const InterviewScreen = () => {
     const navigate = useNavigate();
@@ -19,6 +21,7 @@ const InterviewScreen = () => {
     const [audioLevel, setAudioLevel] = useState(0);
 
     const recognitionRef = useRef(null);
+    const answerRef = useRef(''); // used to track pauses without triggering re-renders
 
     useEffect(() => {
         const data = localStorage.getItem('currentInterview');
@@ -28,18 +31,69 @@ const InterviewScreen = () => {
         setInterviewData(parsed);
         setTimeLeft(parsed.duration * 60);
 
-        // Webcam init
-        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-            .then(stream => { if (videoRef.current) videoRef.current.srcObject = stream; })
-            .catch(err => console.error("Webcam issue", err));
+        let faceModel = null;
+        let faceDetectInterval = null;
+        let hesitationInterval = null;
 
-        // Tab proctoring
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                triggerAlert('Warning: Tab switch detected. Focus lost.');
+        // Webcam & Face Detection Init
+        const initCameraAndFaceDetection = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.onloadedmetadata = () => videoRef.current.play();
+                }
+
+                await tf.setBackend('webgl');
+                faceModel = await blazeface.load();
+
+                faceDetectInterval = setInterval(async () => {
+                    if (videoRef.current && faceModel && videoRef.current.readyState === 4) {
+                        try {
+                            const predictions = await faceModel.estimateFaces(videoRef.current, false);
+                            if (predictions.length === 0) {
+                                triggerAlert('Warning: Face not detected. Please look directly at the screen.');
+                            } else if (predictions.length > 1) {
+                                triggerAlert('Warning: Multiple persons detected in frame.');
+                            }
+                        } catch (e) { console.error("Face monitoring error", e) }
+                    }
+                }, 5000);
+
+            } catch (err) {
+                console.error("Webcam issue", err);
             }
         };
+
+        initCameraAndFaceDetection();
+
+        // Tab proctoring & Mouse Leave
+        const handleVisibilityChange = () => {
+            if (document.hidden) triggerAlert('Warning: Tab switch detected. Focus lost.');
+        };
+        const handleMouseLeave = (e) => {
+            // Check if cursor left from the top of the browser window (trying to switch tabs/open programs)
+            if (e.clientY <= 0) triggerAlert('Warning: Mouse cursor left the window boundaries.');
+        };
+
         document.addEventListener("visibilitychange", handleVisibilityChange);
+        document.addEventListener("mouseleave", handleMouseLeave);
+
+        // Hesitation monitoring
+        let lastAnsLen = 0;
+        let noSpeechCount = 0;
+        hesitationInterval = setInterval(() => {
+            // we use answerRef to check if it has grown
+            if (answerRef.current && answerRef.current.length > 5 && answerRef.current.length === lastAnsLen) {
+                noSpeechCount++;
+                if (noSpeechCount === 2) {
+                    triggerAlert('Warning: Long pause detected. Please continue your answer fluently.');
+                }
+            } else {
+                noSpeechCount = 0;
+            }
+            lastAnsLen = answerRef.current.length;
+        }, 8000); // Check every 8 seconds
 
         // Speech recognition init
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -53,6 +107,7 @@ const InterviewScreen = () => {
                     transcript += e.results[i][0].transcript;
                 }
                 setAnswerText(transcript);
+                answerRef.current = transcript;
 
                 // Simulate audio level jumping when speaking
                 setAudioLevel(Math.random() * 80 + 20);
@@ -62,6 +117,9 @@ const InterviewScreen = () => {
 
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange);
+            document.removeEventListener("mouseleave", handleMouseLeave);
+            if (faceDetectInterval) clearInterval(faceDetectInterval);
+            if (hesitationInterval) clearInterval(hesitationInterval);
             const stream = videoRef.current?.srcObject;
             if (stream) stream.getTracks().forEach(track => track.stop());
         };

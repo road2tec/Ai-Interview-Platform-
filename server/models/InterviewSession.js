@@ -12,6 +12,13 @@ const sessionSchema = mongoose.Schema({
     totalScore: { type: Number, default: 0 },
     alertCount: { type: Number, default: 0 },
     alerts: [alertSchema],
+    currentQuestionIndex: { type: Number, default: 0 },
+    conversation: [
+        {
+            role: { type: String, enum: ["assistant", "user"] },
+            content: { type: String }
+        }
+    ]
 }, { timestamps: true });
 
 const InterviewSession = mongoose.model('InterviewSession', sessionSchema);

@@ -14,12 +14,10 @@ const StartInterview = () => {
         try {
             const res = await startSession({ domain, duration });
             localStorage.setItem('currentInterview', JSON.stringify({
-                sessionId: res.data.session._id,
-                questions: res.data.questions,
-                domain,
-                duration
+                session: res.data.session,
+                firstQuestion: res.data.firstQuestion
             }));
-            navigate('/interview');
+            navigate('/chat');
         } catch (err) {
             alert('Failed to start interview: ' + err.message);
             setLoading(false);
@@ -74,8 +72,8 @@ const StartInterview = () => {
                                         key={d.id}
                                         onClick={() => setDomain(d.id)}
                                         className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 ${domain === d.id
-                                                ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700 shadow-[0_0_20px_rgba(99,102,241,0.15)] scale-[1.02]'
-                                                : 'border-gray-100 bg-white text-gray-500 hover:border-indigo-200 hover:bg-gray-50'
+                                            ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700 shadow-[0_0_20px_rgba(99,102,241,0.15)] scale-[1.02]'
+                                            : 'border-gray-100 bg-white text-gray-500 hover:border-indigo-200 hover:bg-gray-50'
                                             }`}
                                     >
                                         <div className={`mb-2 ${domain === d.id ? 'text-indigo-600' : 'text-gray-400'}`}>
@@ -99,8 +97,8 @@ const StartInterview = () => {
                                         key={d.value}
                                         onClick={() => setDuration(d.value)}
                                         className={`flex-1 py-3 px-2 rounded-2xl border-2 flex flex-col items-center justify-center transition-all duration-300 ${duration === d.value
-                                                ? 'border-purple-500 bg-purple-50/50 text-purple-700 shadow-[0_0_20px_rgba(168,85,247,0.15)] scale-[1.02]'
-                                                : 'border-gray-100 bg-white text-gray-500 hover:border-purple-200 hover:bg-gray-50'
+                                            ? 'border-purple-500 bg-purple-50/50 text-purple-700 shadow-[0_0_20px_rgba(168,85,247,0.15)] scale-[1.02]'
+                                            : 'border-gray-100 bg-white text-gray-500 hover:border-purple-200 hover:bg-gray-50'
                                             }`}
                                     >
                                         <span className="font-black text-lg">{d.value}m</span>

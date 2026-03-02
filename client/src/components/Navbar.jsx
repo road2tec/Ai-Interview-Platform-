@@ -12,8 +12,9 @@ const Navbar = () => {
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
+            setIsScrolled(window.scrollY > 10);
         };
+        handleScroll(); // Check initially
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -24,32 +25,33 @@ const Navbar = () => {
     };
 
     const isLanding = location.pathname === '/';
+    const showDarkNav = isScrolled || !isLanding;
 
     const NavLinks = () => (
         <>
             {isLanding && (
                 <>
-                    <a href="#features" className="text-gray-600 hover:text-primary-600 px-4 py-2 rounded-full text-sm font-bold transition-all hover:bg-primary-50">Features</a>
-                    <a href="#how-it-works" className="text-gray-600 hover:text-primary-600 px-4 py-2 rounded-full text-sm font-bold transition-all hover:bg-primary-50">How it Works</a>
-                    <a href="#about-us" className="text-gray-600 hover:text-primary-600 px-4 py-2 rounded-full text-sm font-bold transition-all hover:bg-primary-50">About Us</a>
+                    <a href="#features" className="text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 px-5 py-2.5 rounded-full text-sm font-black transition-all lowercase tracking-tight">features</a>
+                    <a href="#how-it-works" className="text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 px-5 py-2.5 rounded-full text-sm font-black transition-all lowercase tracking-tight">how it works</a>
+                    <a href="#about-us" className="text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 px-5 py-2.5 rounded-full text-sm font-black transition-all lowercase tracking-tight">about us</a>
                 </>
             )}
         </>
     );
 
     return (
-        <nav className={`fixed w-full z-50 transition-all duration-500 ease-out ${isScrolled ? 'bg-white/80 backdrop-blur-xl border-b border-white/50 shadow-[0_4px_30px_rgba(0,0,0,0.05)] py-3' : 'bg-transparent py-5'}`}>
+        <nav className={`fixed w-full z-50 transition-all duration-500 ease-out ${isScrolled || !isLanding ? 'bg-white/70 backdrop-blur-2xl border-b border-slate-100 shadow-[0_10px_40px_rgba(0,0,0,0.03)] py-3' : 'bg-transparent py-6'}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center">
 
                     {/* Logo */}
                     <div className="flex-shrink-0 flex items-center">
-                        <Link to="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center shadow-md">
-                                <span className="text-white font-bold text-xl">I</span>
+                        <Link to="/" className="flex items-center gap-3 group">
+                            <div className="w-10 h-10 rounded-[1rem] bg-indigo-600 flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                                <span className="text-white font-black text-2xl">I</span>
                             </div>
-                            <span className="text-2xl font-black text-gray-900 tracking-tight">
-                                Interview<span className="text-primary-600">AI</span>
+                            <span className="text-2xl font-black tracking-tighter text-slate-900">
+                                Interview<span className="text-indigo-600 font-black">AI</span>
                             </span>
                         </Link>
                     </div>
@@ -60,19 +62,19 @@ const Navbar = () => {
                     </div>
 
                     {/* Auth Buttons */}
-                    <div className="hidden md:flex items-center space-x-3">
+                    <div className="hidden md:flex items-center space-x-4">
                         {token ? (
                             <>
-                                <Link to="/dashboard" className="text-gray-700 hover:text-primary-600 px-4 py-2 rounded-full text-sm font-bold transition-all hover:bg-primary-50">Dashboard</Link>
-                                <button onClick={handleLogout} className="flex items-center text-gray-500 hover:text-rose-600 px-4 py-2 rounded-full text-sm font-bold transition-all hover:bg-rose-50 border border-transparent hover:border-rose-100">
-                                    <LogOut className="w-4 h-4 mr-1.5" /> Logout
+                                <Link to="/dashboard" className="text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 px-5 py-2.5 rounded-full text-sm font-black transition-all lowercase tracking-tight">dashboard</Link>
+                                <button onClick={handleLogout} className="flex items-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 px-5 py-2.5 rounded-full text-sm font-black transition-all border border-transparent hover:border-rose-100">
+                                    <LogOut className="w-4 h-4 mr-2" /> logout
                                 </button>
                             </>
                         ) : (
                             <>
-                                <Link to="/login" className="text-gray-600 hover:text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold transition-all hover:bg-gray-100">Sign In</Link>
-                                <Link to="/register" className="group flex items-center bg-gradient-to-r from-gray-900 to-gray-800 text-white hover:from-black hover:to-gray-900 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5">
-                                    Get Started <ArrowRight className="w-4 h-4 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                                <Link to="/login" className="text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 px-6 py-2.5 rounded-full text-sm font-black transition-all lowercase tracking-tight">sign in</Link>
+                                <Link to="/register" className="group flex items-center bg-slate-900 text-white px-7 py-3 rounded-2xl text-xs font-black transition-all shadow-[0_10px_30px_rgba(0,0,0,0.1)] hover:bg-black hover:shadow-[0_15px_40px_rgba(0,0,0,0.2)] hover:-translate-y-1 uppercase tracking-widest">
+                                    Get Started <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             </>
                         )}
@@ -80,8 +82,8 @@ const Navbar = () => {
 
                     {/* Mobile Menu Button */}
                     <div className="md:hidden flex items-center">
-                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-gray-600 hover:text-gray-900 p-2">
-                            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-slate-900 hover:text-indigo-600 p-2 transition-colors">
+                            {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
                         </button>
                     </div>
                 </div>
@@ -89,18 +91,18 @@ const Navbar = () => {
 
             {/* Mobile Menu Dropdown */}
             {mobileMenuOpen && (
-                <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-lg py-4 px-4 flex flex-col space-y-4">
+                <div className="md:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-2xl border-b border-slate-100 shadow-2xl py-8 px-6 flex flex-col space-y-4 animate-in slide-in-from-top-4 duration-500">
                     <NavLinks />
-                    <div className="h-px bg-gray-100 my-2 w-full"></div>
+                    <div className="h-px bg-slate-100 my-4 w-full"></div>
                     {token ? (
                         <>
-                            <Link to="/dashboard" className="text-gray-600 font-semibold px-3 py-2">Dashboard</Link>
-                            <button onClick={handleLogout} className="text-red-600 font-semibold px-3 py-2 flex items-center"><LogOut className="w-4 h-4 mr-2" /> Logout</button>
+                            <Link to="/dashboard" className="text-slate-900 font-black px-4 py-3 rounded-2xl hover:bg-indigo-50 transition-colors uppercase tracking-[0.2em] text-[10px]">dashboard</Link>
+                            <button onClick={handleLogout} className="text-rose-600 font-black px-4 py-3 flex items-center gap-3 hover:bg-rose-50 rounded-2xl transition-colors uppercase tracking-[0.2em] text-[10px]"><LogOut className="w-4 h-4" /> logout</button>
                         </>
                     ) : (
-                        <div className="flex flex-col space-y-3">
-                            <Link to="/login" className="text-center text-gray-600 font-semibold py-2 border border-gray-200 rounded-lg">Sign In</Link>
-                            <Link to="/register" className="text-center bg-primary-600 text-white font-semibold py-2 rounded-lg">Get Started Free</Link>
+                        <div className="flex flex-col space-y-4">
+                            <Link to="/login" className="text-center font-black py-4 border border-slate-200 rounded-2xl text-[10px] uppercase tracking-[0.2em] text-slate-600 hover:bg-slate-50 transition-colors">sign in</Link>
+                            <Link to="/register" className="text-center bg-indigo-600 text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-indigo-200">get started free</Link>
                         </div>
                     )}
                 </div>

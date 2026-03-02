@@ -4,13 +4,13 @@ InterviewAI is a full-stack, AI-driven SaaS platform designed to help users prep
 
 ## 🚀 Features
 
-*   **AI Evaluation**: Real-time evaluation of answers using Google Gemini's API, graded on Technical Correctness, Clarity, and Depth.
-*   **Webcam Integration**: Simulates a live interview setting using WebRTC to access the user's camera.
-*   **Speech-to-Text**: Users can dictate their answers using the Web Speech API.
-*   **Real-Time Monitoring / Proctoring**: Tracks tab switches to ensure a strict environment, creating alerts if the user loses focus.
-*   **Interactive Dashboard**: Visualizes performance using domain-wise and history-based charts (Recharts).
-*   **Authentication**: Secure JWT-based authentication system.
-*   **Question Bank**: Includes a seed script with 300+ sample questions across domains like DSA, Web Development, Machine Learning, HR, Data Science, and DBMS.
+*   **Premium Light UI**: A high-impact, modern visual theme centered on clarity, glassmorphism, and smooth animations.
+*   **AI Evolution Grader**: Real-time evaluation of answers using Google Gemini's Pro models, assessing Technical Correctness, Clarity, and Communication.
+*   **Live Proctoring**: Simulates a strict interview room with WebRTC camera access and focus monitoring (tab-switch detection).
+*   **Speech-to-Text Engine**: Hands-free interactions using the Web Speech API for a realistic conversation flow.
+*   **Interactive Analytics**: Deep performance visualization with domain-wise proficiency charts and detailed progress history.
+*   **Secure Environment**: JWT-based authentication and strictly private session data storage.
+*   **Comprehensive Bank**: 300+ sample questions spanning DSA, Web Dev, ML, HR, Data Science, and DBMS.
 
 ## 🛠️ Tech Stack
 
